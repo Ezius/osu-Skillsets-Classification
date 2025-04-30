@@ -137,16 +137,11 @@ class Slider(HitObject):
         # Ensure the arc goes through b
         angles = np.linspace(angle_a, angle_c, num_points)
         if not (angle_b > min(angle_a, angle_c) and angle_b < max(angle_a, angle_c)):
-            if angle_c < angle_a:
-                angle_c += 2 * np.pi
-            else:
-                angle_a += 2 * np.pi
+            if angle_c < angle_a: angle_c += 2 * np.pi
+            else: angle_a += 2 * np.pi
             angles = np.linspace(angle_a, angle_c, num_points)
 
-        arc_points = np.array([
-            [center[0] + r * np.cos(theta), center[1] + r * np.sin(theta)]
-            for theta in angles
-        ])
+        arc_points = np.array([    [center[0] + r * np.cos(theta), center[1] + r * np.sin(theta)]    for theta in angles])
         return np.array(arc_points)
         
 class Spinner(HitObject):
@@ -225,15 +220,16 @@ class Beatmap:
     def __repr__(self):
         return str(self.__dict__)
     
-    def create_datapoint(self, x, y, distance, time, deltatime, datatype: int):
+    def create_datapoint(self, x, y, time, bpm, datatype: int):
         '''
         0:pos_x
         1:pos_y
         2:distance_to_previous_object
         3:time
         4:deltatime
+        5:bpm
 
-        0:circle   --one hot from here
+        0:circle   --one hot from here with previous_index+typeindex
         1:slider
         2:slider point
         3:slider repeat #* i had the most amount of cancer trying to implement this and the perfect curve slider but it hopefully works now
@@ -241,32 +237,30 @@ class Beatmap:
         5:spinner
         6:spinner end
         '''
-        features = np.zeros(12)
-        features[0] = x/512
-        features[1] = y/384
-        features[2] = distance
+        features = np.zeros(13)
+        features[0] = x
+        features[1] = y
+        #features[2] = 0
         features[3] = time
-        features[4] = deltatime
-        features[datatype + 5] = 1
+        #features[4] = 0
+        features[5] = bpm
+        features[datatype + 6] = 1
         return features
     
     def create_extra_info(self):
-        bpms = [ob.get_bpm() for ob in self.beatmap_objects]
-        values, counts = np.unique(bpms, return_counts=True)
-        return np.array([self.difficulty.ar,min(bpms),values[np.argmax(counts)],max(bpms)])
+        return np.array([self.difficulty.ar])
 
-    def beatmap_to_data(self):
+    def beatmap_to_data(self, normalize=True):
         data_points=[]
         for ob in self.beatmap_objects:
             hit_object = ob.hit_object
+            bpm = ob.get_bpm()
 
             if isinstance(hit_object, Circle):
-                data_points.append(self.create_datapoint(hit_object.x, hit_object.y, 0,  hit_object.time, 0, 0))
-
-
+                data_points.append(self.create_datapoint(hit_object.x, hit_object.y,  hit_object.time, bpm, 0))
 
             elif isinstance(hit_object, Slider):
-                data_points.append(self.create_datapoint(hit_object.x, hit_object.y,0,  hit_object.time, 0, 1))
+                data_points.append(self.create_datapoint(hit_object.x, hit_object.y, hit_object.time, bpm, 1))
                 ticks, end = self.get_slider_ticks(ob)
                 repeats = hit_object.repeats
                 duration_per_repeat = self.slider_duration(ob)
@@ -278,29 +272,29 @@ class Beatmap:
                         current_time = tick[2]
                         #print(f"previous_time1 {previous_time:.2f}, current_time1 {current_time:.2f}, DIFFERENCE:  {np.abs(current_time-previous_time):.2f}")
                         total_difference = total_difference + np.abs(tick[2]+-previous_time)
-                        data_points.append(self.create_datapoint(tick[0], tick[1], 0, total_difference, 0, 2))
+                        data_points.append(self.create_datapoint(tick[0], tick[1], total_difference, bpm, 2))
                         previous_time = current_time
                     if repeats<=1:
                         if hit_object.repeats % 2 == 0:                            
                             current_time = hit_object.time
                             total_difference = total_difference + np.abs(current_time-previous_time)
-                            data_points.append(self.create_datapoint(hit_object.x, hit_object.y, 0, total_difference, 0, 4))
+                            data_points.append(self.create_datapoint(hit_object.x, hit_object.y, total_difference, bpm, 4))
                             previous_time = current_time
                         else:                            
                             current_time = hit_object.time+duration_per_repeat
                             total_difference = total_difference + np.abs(current_time-previous_time)
-                            data_points.append(self.create_datapoint(end[0], end[1], 0, total_difference, 0, 4))
+                            data_points.append(self.create_datapoint(end[0], end[1], total_difference, bpm, 4))
                             previous_time = current_time
                     else:
                         if repeats % 2 == 1 - (hit_object.repeats % 2):
                             current_time = hit_object.time
                             total_difference = total_difference + np.abs(current_time-previous_time)
-                            data_points.append(self.create_datapoint(hit_object.x, hit_object.y, 0, total_difference, 0, 3))
+                            data_points.append(self.create_datapoint(hit_object.x, hit_object.y, total_difference, bpm, 3))
                             previous_time = current_time
                         else:
                             current_time = hit_object.time+duration_per_repeat
                             total_difference = total_difference + np.abs(current_time-previous_time)
-                            data_points.append(self.create_datapoint(end[0], end[1], 0, total_difference, 0, 3))
+                            data_points.append(self.create_datapoint(end[0], end[1], total_difference, bpm, 3))
                             previous_time = current_time
 
                     rounds += 1
@@ -308,24 +302,36 @@ class Beatmap:
                     ticks = ticks[::-1]
 
             elif isinstance(hit_object, Spinner):
-                data_points.append(self.create_datapoint(hit_object.x, hit_object.y, 0, hit_object.time, 0, 5))
-                data_points.append(self.create_datapoint(hit_object.x, hit_object.y, 0, hit_object.end_time, 0, 6))
+                data_points.append(self.create_datapoint(hit_object.x, hit_object.y, hit_object.time, bpm, 5))
+                data_points.append(self.create_datapoint(hit_object.x, hit_object.y, hit_object.end_time, bpm, 6))
 
         data_points = np.array(data_points)
-        data_points[:,3] = (data_points[:,3] - data_points[:,3].min())/data_points[:,3].max() #normalizing time from 0-1
+        extra_data = self.create_extra_info()
+
+        if normalize:
+            self.normalize_data(data_points, extra_data)
+
         diffs = data_points[:,:2][1:] - data_points[:,:2][:-1]
         data_points[1:,2] = np.linalg.norm(diffs, axis=1)
 
         dtime = np.abs(data_points[:,3][1:] - data_points[:,3][:-1])
         data_points[1:,4] = dtime
-        return data_points, self.create_extra_info()
+        return data_points, extra_data
+    
+    def normalize_data(self, data, extra_data):
+        data[:,0] /= PLAYFIELD_SIZE[0]
+        data[:,1] /= PLAYFIELD_SIZE[1]
+        data[:,3] -= data[:,3].min()
+        data[:,3:5] /= 180000 #3 minutes
+
+        extra_data[0] /= 10
+        
+
     
     def slider_duration(self, beat_object:BeatMapObject):
-        hit_object = beat_object.hit_object
-        if isinstance(hit_object, Slider):
-            return hit_object.length/(self.difficulty.slider_velocity*100*beat_object.get_sv())*beat_object.beat_duration
-        else:
-            return 0
+        hit_object:Slider = beat_object.hit_object
+        return hit_object.length/(self.difficulty.slider_velocity*100*beat_object.get_sv())*beat_object.beat_duration
+
 
     def get_slider_ticks(self, beat_object:BeatMapObject):
         hit_object:Slider = beat_object.hit_object
@@ -346,7 +352,7 @@ class Beatmap:
             if total_length>sd:
                 break
         end = (points[i][0], points[i][1], total_length/hit_object.length*sd + hit_object.time)
-        return ticks, end
+        return np.array(ticks), np.array(end)
         
     @staticmethod
     def str_to_beatmap(string):
@@ -381,7 +387,7 @@ class Beatmap:
         metadata = Metadata(**metadata_values)
         difficulty = Difficulty(**difficulty_values)
 
-        timing_points = []
+        timing_points:list[TimingPoint] = []
         for tp in raw_map[timing_points_index+1:]:
             if tp=="\n": break
             timing_points.append(TimingPoint(tp))
