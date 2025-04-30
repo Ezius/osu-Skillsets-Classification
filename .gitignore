@@ -1,0 +1,7 @@
+__pycache__
+.vscode
+versions
+model_weights
+beatmap_parser.prof
+beatmap_parser_test.ipynb
+data
