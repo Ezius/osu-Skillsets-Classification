@@ -40,7 +40,6 @@ def process_beatmapdata(process_idx, skills, set_ids_dict, beatmap_ids_dict):
                                                         found_maps.append((set_id,beatmap_id,data,extra_data,skill))
                                                         seen_ids.append(beatmap_id)
                                                 except Exception as e:
-                                                    #print(f"Error with Beatmap set {set_id}, {beatmap_id}")
                                                     print(f"Error with Beatmap set {set_id}, id: {beatmap_id} error: {e}")
 
     return found_maps
