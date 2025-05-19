@@ -407,5 +407,5 @@ class Beatmap:
     
     @staticmethod
     def file_to_beatmap(file_location):
-        raw_map = open(file_location, "r").readlines()
+        raw_map = open(file_location, "r", encoding="utf-8", errors="ignore").readlines()
         return Beatmap.str_to_beatmap(raw_map)
