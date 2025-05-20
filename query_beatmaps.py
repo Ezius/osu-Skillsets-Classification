@@ -49,7 +49,7 @@ def parse_collection_from_txt(string):
         return re.findall(r"https://osu\.ppy\.sh/s/(\d+)", string), re.findall(r"★\((\d+)\)", string)
 
 def get_beatmapdata():
-    skills = ["AIM", "STREAM", "ALT", "TECH", "SPEED", "READING", "RHYTHM"]
+    skills = ["AIM", "STREAM", "ALT", "TECH", "SPEED", "RHYTHM"]
     skill_strings = []
     for skill in skills:
         with open(f"chiv_collections/{skill}.txt", encoding="utf-8", errors="ignore") as f:
