@@ -356,6 +356,7 @@ class Beatmap:
         
     @staticmethod
     def str_to_beatmap(string):
+
         metadata_keys = {
             'title': 'Title:',
             'artist': 'Artist:',
@@ -381,9 +382,9 @@ class Beatmap:
         difficulty_index = raw_map.index('[Difficulty]\n')
 
         metadata_values = {key: next((line.split(prefix)[-1].strip() for line in raw_map[metadata_index + 1:difficulty_index] if line.startswith(prefix)), None)
-                           for key, prefix in metadata_keys.items()}
+                            for key, prefix in metadata_keys.items()}
         difficulty_values = {key: float(next((line.split(prefix)[-1].strip() for line in raw_map[difficulty_index + 1:] if line.startswith(prefix)), None))
-                             for key, prefix in difficulty_keys.items()}
+                                for key, prefix in difficulty_keys.items()}
         metadata = Metadata(**metadata_values)
         difficulty = Difficulty(**difficulty_values)
 
@@ -404,7 +405,7 @@ class Beatmap:
 
             beatmap_objects.append(BeatMapObject(hit_object, timing_points[tp_idx], beat_duration))
         return Beatmap(metadata, difficulty, beatmap_objects)
-    
+
     @staticmethod
     def file_to_beatmap(file_location):
         raw_map = open(file_location, "r", encoding="utf-8", errors="ignore").readlines()
