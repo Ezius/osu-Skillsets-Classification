@@ -22,7 +22,7 @@ class HitObject(ABC):
     @staticmethod
     def str_to_hit_object(string):
         hit_object_elems = string.split(',')
-        if len(hit_object_elems)==6:
+        if len(hit_object_elems)<=6:
             return Circle(string)
         elif len(hit_object_elems)==7:
             return Spinner(string)
@@ -357,23 +357,6 @@ class Beatmap:
     @staticmethod
     def str_to_beatmap(string):
 
-        metadata_keys = {
-            'title': 'Title:',
-            'artist': 'Artist:',
-            'creator': 'Creator:',
-            'dif_name': 'Version:',
-            'beatmap_id': 'BeatmapID:',
-            'set_id': 'BeatmapSetID:'
-        }
-
-        difficulty_keys = {
-            'hp': 'HPDrainRate:',
-            'cs': 'CircleSize:',
-            'od': 'OverallDifficulty:',
-            'ar': 'ApproachRate:',
-            'slider_velocity': 'SliderMultiplier:',
-            'slider_tick_rate': 'SliderTickRate:'
-        }
 
         raw_map = string
         timing_points_index = raw_map.index("[TimingPoints]\n")
@@ -381,10 +364,44 @@ class Beatmap:
         metadata_index = raw_map.index('[Metadata]\n')
         difficulty_index = raw_map.index('[Difficulty]\n')
 
-        metadata_values = {key: next((line.split(prefix)[-1].strip() for line in raw_map[metadata_index + 1:difficulty_index] if line.startswith(prefix)), None)
-                            for key, prefix in metadata_keys.items()}
-        difficulty_values = {key: float(next((line.split(prefix)[-1].strip() for line in raw_map[difficulty_index + 1:] if line.startswith(prefix)), None))
-                                for key, prefix in difficulty_keys.items()}
+        metadata_values = {'title':"unknown", "artist":"unknown", 
+                           "creator":"unknown", "dif_name":"unknown",
+                           "beatmap_id":-1, "set_id":-1}
+        for i in range(metadata_index + 1, len(raw_map)):
+            if raw_map[i] == '\n':
+                break
+            if raw_map[i].startswith('Title:'):
+                metadata_values['title'] = raw_map[i][6:-1]
+            if raw_map[i].startswith('Artist:'):
+                metadata_values['artist'] = raw_map[i][7:-1]
+            if raw_map[i].startswith('Creator:'):
+                metadata_values['creator'] = raw_map[i][8:-1]
+            if raw_map[i].startswith('Version:'):
+                metadata_values['dif_name'] = raw_map[i][8:-1]
+            if raw_map[i].startswith('BeatmapID:'):
+                metadata_values['beatmap_id'] = int(raw_map[i][10:-1])
+            if raw_map[i].startswith('BeatmapSetID:'):
+                metadata_values['set_id'] = int(raw_map[i][13:-1])
+
+        difficulty_values = {'hp':0, 'cs':0, 'od':0,
+                             'ar':0, 'slider_velocity':1,
+                             'slider_tick_rate':1}
+        for i in range(difficulty_index + 1, len(raw_map)):
+            if raw_map[i] == '\n':
+                break
+            if raw_map[i].startswith('HPDrainRate:'):
+                difficulty_values['hp'] = float(raw_map[i][len('HPDrainRate:'):-1])
+            if raw_map[i].startswith('CircleSize:'):
+                difficulty_values['cs'] = float(raw_map[i][len('CircleSize:'):-1])
+            if raw_map[i].startswith('OverallDifficulty:'):
+                difficulty_values['od'] = float(raw_map[i][len('OverallDifficulty:'):-1])
+            if raw_map[i].startswith('ApproachRate:'):
+                difficulty_values['ar'] = float(raw_map[i][len('ApproachRate:'):-1])
+            if raw_map[i].startswith('SliderMultiplier:'):
+                difficulty_values['slider_velocity'] = float(raw_map[i][len('SliderMultiplier:'):-1])
+            if raw_map[i].startswith('SliderTickRate:'):
+                difficulty_values['slider_tick_rate'] = float(raw_map[i][len('SliderTickRate:'):-1])        
+
         metadata = Metadata(**metadata_values)
         difficulty = Difficulty(**difficulty_values)
 

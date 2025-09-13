@@ -99,6 +99,7 @@ def get_beatmap_from_website(id):
 
 
 def visualize_beatmap_skillsets(model, beatmap:obp.Beatmap, dt:bool=False):
+    _ = model.eval()
     def median_filter_columns(x: torch.Tensor, kernel_size: int) -> torch.Tensor:
         assert kernel_size % 2 == 1, "Kernel size must be odd"
         pad = kernel_size // 2
@@ -196,6 +197,7 @@ def visualize_beatmap_skillsets_live(model, beatmap:obp.Beatmap, dt: bool = Fals
     """
     Visualize skillsets for a beatmap. If `update=True`, it updates an existing plot instead of creating a new one.
     """
+    _ = model.eval()
     # --- Helper ---
     def median_filter_columns(x: torch.Tensor, kernel_size: int) -> torch.Tensor:
         assert kernel_size % 2 == 1, "Kernel size must be odd"
