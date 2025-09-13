@@ -5,6 +5,12 @@ import torch
 import models
 import osu_beatmap_parser as obp
 import models_utils
+from flask import Flask, jsonify
+from flask_cors import CORS
+
+
+app = Flask(__name__)
+CORS(app)
 
 API_URL = "http://localhost:20727/json"
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -19,61 +25,56 @@ BATCH_SIZE = 16
 
 model = models.SkillsetClassifier_v1_1(MAX_SEQ_LEN, NUM_CLASSES)
 
-
 #loads model weights
 PATH = "model_weights/osu_skills_v2.pth"
 model.load_state_dict(torch.load(PATH,weights_only=True))
+model.eval()
 
+latest_data = None
 def fetch_beatmap_data():
+    response = requests.get(API_URL, timeout=3)
+    #print("SteamCompanion Fetching Data", response.status_code)
     try:
-        response = requests.get(API_URL)
-        print(response.status_code)
-        #print(response.text)
-        try:
-            data = json.loads(response.content.decode("utf-8-sig"))
-        except Exception as e:
-            print(e)
-            print("Failed to JSONIFY the Data")
-        #print(data)
+        data = json.loads(response.content.decode("utf-8-sig"))
         return data
-    except requests.exceptions.RequestException:
-        return None
-    except ValueError:
-        return None
+    except Exception as e:
+        print("Fetch error:", e)
+    return None
 
-def main(poll_interval=1):
-    old_location = None
+
+def update_loop(poll_interval=2):
+    previous_location, previous_mods = None, None
+    global latest_data
     print("Starting osu! beatmap fetcher...")
-    try:
-        while True:
-            data = fetch_beatmap_data()
-            #print(data)
-            if data:
-                #print(f"Title: {data.get('mapArtistTitle')}")
-                #print(f"Artist: {data.get('artistRoman')}")
-                #print(f"Difficulty: {data.get('mapDiff')}")
-                #print(f"Beatmap ID: {data.get('mapid')}")
-                #print(f"Mapset ID: {data.get('mapsetid')}")
-                #print(f"File Location: {data.get('osuFileLocation')}")
-                #print(f"Mods: {data.get('mods')}")
-                #print(f"Time left: {data.get('timeLeft')}")
-                #print("------")
-                #try:
-                
-                location = data.get('osuFileLocation')
-                if old_location != location:
-                    print(old_location, location)
+    while True:
+        data = fetch_beatmap_data()
+        if data:            
+            location = data.get('osuFileLocation')
+            mods = data.get('mods')
+            
+            if location and (previous_location != location or previous_mods != mods):
+                try:
                     beatmap = obp.Beatmap.file_to_beatmap(location)
-                    models_utils.visualize_beatmap_skillsets_live(model, beatmap, True if "DT" in data.get('mods') else False)
-                    old_location = location
-                #except Exception as e:
-                #    print(e)
+                    latest_data = models_utils.process_data(model, beatmap, True if "DT" in data.get('mods') else False)
+                    previous_location, previous_mods = location, mods
+                except Exception as e:
+                    print("Failed to Process Beatmap", e)
+                    print(e.with_traceback())
+        else:
+            print("No map loaded.")
+        time.sleep(poll_interval)
 
-            else:
-                print("No map loaded.")
-            time.sleep(poll_interval)
-    except KeyboardInterrupt:
-        print("Fetcher stopped.")
+@app.route("/skillsets.json")
+def get_skillsets():
+    if latest_data is None:
+        return jsonify({"status": "no map loaded"})
+    #print("Sending:",jsonify(latest_data).data)
+    return jsonify(latest_data)
+
+
 
 if __name__ == "__main__":
-    main()
+    from threading import Thread
+    t = Thread(target=update_loop, daemon=True)
+    t.start()
+    app.run(port=7272, debug=False)

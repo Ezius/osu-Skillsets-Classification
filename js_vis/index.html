@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Skillset Visualization</title>
+  <style>
+    body {
+      margin: 0;
+      background: #393653;
+      color: white;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #pageTitle {
+      text-align: center;
+      font-size: 30px;
+      font-weight: bold;
+      margin: 10px 0;
+      color: white;
+    }
+
+    .plots-container {
+      display: flex;
+      width: 95vw;
+      height: 70vh;
+      gap: 5px;
+    }
+
+    #skillsetProbability {
+      flex: 0.4;
+      min-width: 0; /* ensures proper flex sizing */
+      margin: 0;
+      padding: 0;
+    }
+
+    .right-side {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    #skillsetspreadLine, #skillsetspreadStacked {
+      flex: 1;
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+    }
+
+    #overlay {
+      margin-top: 20px;
+      max-width: 95vw;
+      max-height: 20vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="pageTitle">Loading...</div>
+
+  <div class="plots-container">
+    <div id="skillsetProbability"></div>
+    <div class="right-side">
+      <div id="skillsetspreadLine"></div>
+      <div id="skillsetspreadStacked"></div>
+    </div>
+  </div>
+
+  <iframe 
+    id="overlay" 
+    src="http://localhost:20727/overlays/SC_Live%20Overlay/" 
+    style="width: 100%; height: 600px; border: none;">
+  </iframe>
+
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>
