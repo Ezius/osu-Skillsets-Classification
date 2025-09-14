@@ -42,7 +42,7 @@ def fetch_beatmap_data():
     return None
 
 
-def update_loop(poll_interval=2):
+def update_loop(poll_interval=1):
     previous_location, previous_mods = None, None
     global latest_data
     print("Starting osu! beatmap fetcher...")
@@ -59,7 +59,6 @@ def update_loop(poll_interval=2):
                     previous_location, previous_mods = location, mods
                 except Exception as e:
                     print("Failed to Process Beatmap", e)
-                    print(e.with_traceback())
         else:
             print("No map loaded.")
         time.sleep(poll_interval)
