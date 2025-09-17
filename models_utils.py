@@ -16,12 +16,11 @@ import json
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 import plotly.colors as pc
-import streamlit as st
 
 SKILLSET_LABELS = ["AIM", "STREAM", "ALT", "TECH", "SPEED", "RHYTHM"]
 NUM_CLASSES = len(SKILLSET_LABELS)
 INPUT_DIM = 12
-MAX_SEQ_LEN = 124
+MAX_SEQ_LEN = 142
 BATCH_SIZE = 16
 
 
@@ -63,7 +62,6 @@ def decode_output(tensor):
 
 def create_beatmaps_batch(beatmaps_data, extra_data, labels, batch_size): #beatmaps_data and extra_data must match
     max_length = len(beatmaps_data)-1
-    ids = [random.randint(0,max_length) for _ in range(batch_size)]
     swapx = random.random()
     swapy = random.random()
     swapx_ = False if swapx<0.5 else True
@@ -71,7 +69,8 @@ def create_beatmaps_batch(beatmaps_data, extra_data, labels, batch_size): #beatm
     batch = []
     y = []
     extra = []
-    for id in ids:
+    while len(batch)<batch_size:
+        id = random.randint(0,max_length)
         y.append(one_hot_labels(labels[id]))
         extra.append(extra_data[id])
         sequence_length = beatmaps_data[id].shape[0]-1
@@ -244,89 +243,3 @@ def visualize_beatmap_skillsets(model, beatmap:obp.Beatmap, dt:bool=False):
     plt.tight_layout()
     plt.show()
     time.sleep(1)
-
-plot_placeholder = st.empty()
-def visualize_beatmap_skillsets_streamlit(model, beatmap:obp.Beatmap, dt: bool = False):
-    beatmap_sequence, extra = beatmap.beatmap_to_data()
-    if dt:
-        apply_dt(beatmap_sequence, extra)
-
-    beatmap_sequence = torch.tensor(beatmap_sequence, dtype=torch.float32)
-    extra = torch.tensor(extra, dtype=torch.float32)
-
-    step_size = MAX_SEQ_LEN // 10
-    skillvals = torch.zeros(((beatmap_sequence.shape[0] - MAX_SEQ_LEN) // step_size + 1, len(SKILLSET_LABELS)))
-    for i, j in enumerate(range(0, beatmap_sequence.shape[0] - MAX_SEQ_LEN - 1, step_size)):
-        prediction = model(beatmap_sequence[None, None, j:j + MAX_SEQ_LEN, :], extra[None, :])
-        skillvals[i] = prediction
-
-    sm = nn.Softmax(dim=-1)
-    kernel_size = 5
-    skillvals_filtered = median_filter_columns(skillvals, kernel_size)
-    skillvals_filtered = sm(skillvals_filtered)
-    skillvaluespread = skillvals_filtered.cpu().detach().numpy()
-
-    min_time = float('inf')
-    max_time = float('-inf')
-    for b in beatmap.beatmap_objects:
-        t = b.hit_object.time
-        if t < min_time:
-            min_time = t
-        if t > max_time:
-            max_time = t
-
-    b_time = np.linspace(min_time, max_time, len(skillvaluespread)) / 1000 / 60  # minutes
-
-    # --- Build Plotly figure ---
-    fig = make_subplots(
-        rows=2, cols=2,
-        column_widths=[0.3, 0.7],
-        row_heights=[0.5, 0.5],
-        specs=[[{"type": "bar"}, {"type": "scatter"}],
-               [None, {"type": "scatter"}]],
-        subplot_titles=("Skill Distribution", "Skill Timeline", "Stacked Skills")
-    )
-
-    colors = pc.qualitative.Set3
-
-    # Bar chart (overall distribution)
-    totals = np.sum(skillvaluespread, axis=0) / np.sum(skillvaluespread)
-    fig.add_trace(go.Bar(
-        x=totals,
-        y=SKILLSET_LABELS,
-        orientation="h",
-        marker=dict(color=colors[:len(SKILLSET_LABELS)]),
-        name="Skill Distribution"
-    ), row=1, col=1)
-
-    # Line plot
-    for i, label in enumerate(SKILLSET_LABELS):
-        fig.add_trace(go.Scatter(
-            x=b_time,
-            y=skillvaluespread[:, i],
-            mode="lines",
-            name=label,
-            line=dict(color=colors[i % len(colors)])
-        ), row=1, col=2)
-
-    # Stacked area chart
-    for i, label in enumerate(SKILLSET_LABELS):
-        fig.add_trace(go.Scatter(
-            x=b_time,
-            y=skillvaluespread[:, i],
-            mode="lines",
-            stackgroup="one",
-            name=label,
-            line=dict(color=colors[i % len(colors)])
-        ), row=2, col=2)
-
-    fig.update_layout(
-        title=f"Beatmap: {beatmap.metadata.title}",
-        height=600,
-        width=1200,
-        showlegend=True
-    )
-
-    # --- Streamlit display ---
-    #st.plotly_chart(fig, use_container_width=True)
-    plot_placeholder.plotly_chart(fig, use_container_width=True)

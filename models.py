@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as f
 import torch.optim as optim
 
-class SkillsetClassifier_v1_1 (nn.Module):
+class SkillsetClassifier_v2_1 (nn.Module):
     def __init__(self, context_length:int, skillsets:int):
         self.SKILLSET_LABELS = ["AIM", "STREAM", "ALT", "TECH", "SPEED", "RHYTHM"]
         self.NUM_CLASSES = len(self.SKILLSET_LABELS)
@@ -49,47 +49,50 @@ class SkillsetClassifier_v1_1 (nn.Module):
         return logits
     
 
-class SkillsetClassifier_v1_2 (nn.Module):
-    def __init__(self, context_length:int, skillsets:int):
+class SkillsetClassifier_v2_2 (nn.Module):
+    def __init__(self):
         self.SKILLSET_LABELS = ["AIM", "STREAM", "ALT", "TECH", "SPEED", "RHYTHM"]
         self.NUM_CLASSES = len(self.SKILLSET_LABELS)
-        self.INPUT_DIM = 12
-        self.MAX_SEQ_LEN = 124
+        self.INPUT_DIM = 13
+        self.MAX_SEQ_LEN = 142
         self.BATCH_SIZE = 16
+        self.threshold = 1024
         super().__init__()
 
         self.conv_block = nn.Sequential(
-            nn.Conv2d(1, 32, (5,5)),
+            nn.Conv2d(1, 32, (1,9)),
             nn.ReLU(),
-            nn.Conv2d(32, 64, (3,3)),
+            nn.Dropout(0.2),
+            nn.Conv2d(32, 64, (1,7)),
             nn.ReLU(),
-            nn.Conv2d(64, 128, (3,3)),
+            nn.Dropout(0.2),
+            nn.Conv2d(64, 128, (1,7)),
             nn.ReLU(),
-            nn.Conv2d(128, 256, (3,3)),
-            nn.ReLU()
+            nn.Dropout(0.1),
+            nn.Conv2d(128, 256, (1,5)),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d((self.INPUT_DIM, 4))
         )
 
         self.flatten = nn.Flatten(start_dim=1)
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(2*114, 2*114*2), # (context_length - convlayerunpadding(10+10+1)) * skillsets * 32conv
+            nn.Linear(13312, 4096),
             nn.ReLU(),
             nn.Dropout(0.1),
-            nn.Linear(2*114*2, 512),
+            nn.Linear(4096, 512),
             nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(512, 1024),
-            nn.ReLU(),
-            nn.Linear(1024, 256),
-            nn.ReLU(),
-            nn.Linear(256, 64),
+            nn.Linear(512, 64),
             nn.ReLU(),
             nn.Linear(64, len(self.SKILLSET_LABELS))
         )
+
+    def number_parameters(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
     
-    def forward(self, x, extra_x): # add extra input for metadata
+    def forward(self, x):
+        x = torch.clamp(x, -self.threshold, self.threshold)
         x = self.conv_block(x)
         x = self.flatten(x)
-        #x = torch.concat((x,extra_x), dim=1)
         logits = self.linear_relu_stack(x)
         return logits
 

@@ -23,7 +23,7 @@ INPUT_DIM = 12
 MAX_SEQ_LEN = 124
 BATCH_SIZE = 16
 
-model = models.SkillsetClassifier_v1_1(MAX_SEQ_LEN, NUM_CLASSES)
+model = models.SkillsetClassifier_v2_1(MAX_SEQ_LEN, NUM_CLASSES)
 
 #loads model weights
 PATH = "model_weights/osu_skills_v2.pth"
