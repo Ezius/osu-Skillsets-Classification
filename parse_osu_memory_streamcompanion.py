@@ -32,11 +32,13 @@ model.eval()
 
 latest_data = None
 def fetch_beatmap_data():
-    response = requests.get(API_URL, timeout=3)
-    #print("SteamCompanion Fetching Data", response.status_code)
     try:
+        response = requests.get(API_URL, timeout=10)
+        #print("SteamCompanion Fetching Data", response.status_code)
         data = json.loads(response.content.decode("utf-8-sig"))
         return data
+    except requests.exceptions.Timeout:
+        print("StreamCompanion request timed out (normal if no map loaded)")
     except Exception as e:
         print("Fetch error:", e)
     return None
