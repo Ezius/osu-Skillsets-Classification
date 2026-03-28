@@ -50,10 +50,10 @@ def update_loop(poll_interval=1):
     print("Starting osu! beatmap fetcher...")
     while True:
         data = fetch_beatmap_data()
-        if data:            
+        if data:
             location = data.get('osuFileLocation')
             mods = data.get('mods')
-            
+
             if location and (previous_location != location or previous_mods != mods):
                 try:
                     beatmap = obp.Beatmap.file_to_beatmap(location)

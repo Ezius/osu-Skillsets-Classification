@@ -40,14 +40,14 @@ class SkillsetClassifier_v2_1 (nn.Module):
             nn.ReLU(),
             nn.Linear(64, len(self.SKILLSET_LABELS))
         )
-    
+
     def forward(self, x, extra_x): # add extra input for metadata
         x = self.conv_block(x)
         x = self.flatten(x)
         #x = torch.concat((x,extra_x), dim=1)
         logits = self.linear_relu_stack(x)
         return logits
-    
+
 
 class SkillsetClassifier_v2_2 (nn.Module):
     def __init__(self):
@@ -88,7 +88,7 @@ class SkillsetClassifier_v2_2 (nn.Module):
 
     def number_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
-    
+
     def forward(self, x):
         x = torch.clamp(x, -self.threshold, self.threshold)
         x = self.conv_block(x)

@@ -46,7 +46,7 @@ def process_beatmapdata(process_idx, skills, set_ids_dict, beatmap_ids_dict):
                                                 data, extra_data = obp.Beatmap.file_to_beatmap(file_path).beatmap_to_data(normalize=True)
                                                 if len(data)<350:
                                                     continue
-                                                if "DT_" in skill: 
+                                                if "DT_" in skill:
                                                     m_utils.apply_dt(data, extra_data)
                                                     found_maps.append((set_id,beatmap_id,data,extra_data,skill[3:]))
                                                     seen_dt_ids.append(beatmap_id)

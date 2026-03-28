@@ -18,7 +18,7 @@ class HitObject(ABC):
 
     def __repr__(self):
         return str(self.__dict__)
-    
+
     @staticmethod
     def str_to_hit_object(string):
         hit_object_elems = string.split(',')
@@ -40,7 +40,7 @@ class Circle(HitObject):
 class Slider(HitObject):
     def __init__(self,slider_string):
         self.string = slider_string
-        slider_elems = slider_string.split(",") 
+        slider_elems = slider_string.split(",")
         super().__init__(int(slider_elems[0]), int(slider_elems[1]), int(slider_elems[2]), int(slider_elems[3]))
         type_points = slider_elems[5].split('|')
         self.curve_type = type_points[0]
@@ -52,26 +52,26 @@ class Slider(HitObject):
 
     def __str__(self):
         return f"{self.string}"
-        
+
     def slider_parts(self):
         slider_f = []
         slider_parts = []
         for i,p in enumerate(self.curve_points):
             if i==len(self.curve_points)-1:
-                slider_f = [p] + slider_f 
-                slider_parts = [slider_f] + slider_parts 
+                slider_f = [p] + slider_f
+                slider_parts = [slider_f] + slider_parts
                 return slider_parts
-            slider_f = [p] + slider_f 
+            slider_f = [p] + slider_f
             if self.curve_points[i] == self.curve_points[i+1]:
-                slider_parts = [slider_f] + slider_parts 
+                slider_parts = [slider_f] + slider_parts
                 slider_f = []
-    
+
     def draw_slider(self):
         values = self.get_slider_path()
         plt.xlim(-10, PLAYFIELD_SIZE[0]+10)
         plt.ylim(PLAYFIELD_SIZE[1]+10, -10)
         plt.plot(values[:,0], values[:,1])
-    
+
     def get_slider_path(self):
         if self.curve_type=="P":
             return np.array(self.perfect_curve(self.curve_points))
@@ -79,7 +79,7 @@ class Slider(HitObject):
             return np.linspace(self.curve_points[0], self.curve_points[1], 64)
         else:
             return np.array([self.bernstein_bezier(part) for part in self.slider_parts()]).reshape(-1,2)[::-1]
-        
+
     def bernstein_bezier(self, points, cells=150):
         x, y = zip(*points)
         x = np.array(x)
@@ -96,7 +96,7 @@ class Slider(HitObject):
             bezier[:,0] += basis * x[i]
             bezier[:,1] += basis * y[i]
         return bezier
-    
+
     def get_circle_center(self, a, b, c, epsilon=1e-10):
         """Compute the center of the circle through points a, b, and c."""
         A = b - a
@@ -143,7 +143,7 @@ class Slider(HitObject):
 
         arc_points = np.array([    [center[0] + r * np.cos(theta), center[1] + r * np.sin(theta)]    for theta in angles])
         return np.array(arc_points)
-        
+
 class Spinner(HitObject):
     def __init__(self, spinner_string:str):
         self.string = spinner_string
@@ -153,7 +153,7 @@ class Spinner(HitObject):
 
     def __str__(self):
         return f"{self.string}"
-    
+
 class Difficulty:
     def __init__(self, hp:float, cs:float, od:float, ar:float, slider_velocity:float, slider_tick_rate:float):
         self.hp = hp
@@ -182,7 +182,7 @@ class TimingPoint:
         return str(self.__dict__)
     def __str__(self):
         return f"{self.string}"
-    
+
 class BeatMapObject:
     def __init__(self, hit_object:HitObject, timing_point:TimingPoint, beat_duration:float):
         self.beat_duration = beat_duration
@@ -191,10 +191,10 @@ class BeatMapObject:
 
     def __repr__(self):
         return str(self.__dict__)
-        
+
     def get_bpm(self):
         return 1 / self.beat_duration * 1000 * 60
-    
+
     def get_sv(self):
         if self.timing_point.uninherited==0:
             return abs(100/self.timing_point.beat_length)
@@ -219,7 +219,7 @@ class Beatmap:
         self.difficulty = difficulty
     def __repr__(self):
         return str(self.__dict__)
-    
+
     def create_datapoint(self, x, y, time, bpm, datatype: int):
         '''
         0:pos_x
@@ -246,7 +246,7 @@ class Beatmap:
         features[5] = bpm
         features[datatype + 6] = 1
         return features
-    
+
     def create_extra_info(self):
         return np.array([self.difficulty.ar])
 
@@ -275,12 +275,12 @@ class Beatmap:
                         data_points.append(self.create_datapoint(tick[0], tick[1], total_difference, bpm, 2))
                         previous_time = current_time
                     if repeats<=1:
-                        if hit_object.repeats % 2 == 0:                            
+                        if hit_object.repeats % 2 == 0:
                             current_time = hit_object.time
                             total_difference = total_difference + np.abs(current_time-previous_time)
                             data_points.append(self.create_datapoint(hit_object.x, hit_object.y, total_difference, bpm, 4))
                             previous_time = current_time
-                        else:                            
+                        else:
                             current_time = hit_object.time+duration_per_repeat
                             total_difference = total_difference + np.abs(current_time-previous_time)
                             data_points.append(self.create_datapoint(end[0], end[1], total_difference, bpm, 4))
@@ -317,7 +317,7 @@ class Beatmap:
         dtime = np.abs(data_points[:,3][1:] - data_points[:,3][:-1])
         data_points[1:,4] = dtime
         return data_points, extra_data
-    
+
     def normalize_data(self, data, extra_data):
         data[:,0] /= PLAYFIELD_SIZE[0]
         data[:,1] /= PLAYFIELD_SIZE[1]
@@ -325,9 +325,9 @@ class Beatmap:
         data[:,3:5] /= 180000 #3 minutes
 
         extra_data[0] /= 10
-        
 
-    
+
+
     def slider_duration(self, beat_object:BeatMapObject):
         hit_object:Slider = beat_object.hit_object
         return hit_object.length/(self.difficulty.slider_velocity*100*beat_object.get_sv())*beat_object.beat_duration
@@ -353,7 +353,7 @@ class Beatmap:
                 break
         end = (points[i][0], points[i][1], total_length/hit_object.length*sd + hit_object.time)
         return np.array(ticks), np.array(end)
-        
+
     @staticmethod
     def str_to_beatmap(string):
 
@@ -364,7 +364,7 @@ class Beatmap:
         metadata_index = raw_map.index('[Metadata]\n')
         difficulty_index = raw_map.index('[Difficulty]\n')
 
-        metadata_values = {'title':"unknown", "artist":"unknown", 
+        metadata_values = {'title':"unknown", "artist":"unknown",
                            "creator":"unknown", "dif_name":"unknown",
                            "beatmap_id":-1, "set_id":-1}
         for i in range(metadata_index + 1, len(raw_map)):
@@ -400,7 +400,7 @@ class Beatmap:
             if raw_map[i].startswith('SliderMultiplier:'):
                 difficulty_values['slider_velocity'] = float(raw_map[i][len('SliderMultiplier:'):-1])
             if raw_map[i].startswith('SliderTickRate:'):
-                difficulty_values['slider_tick_rate'] = float(raw_map[i][len('SliderTickRate:'):-1])        
+                difficulty_values['slider_tick_rate'] = float(raw_map[i][len('SliderTickRate:'):-1])
 
         metadata = Metadata(**metadata_values)
         difficulty = Difficulty(**difficulty_values)

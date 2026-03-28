@@ -83,7 +83,7 @@ def create_beatmaps_batch(beatmaps_data, extra_data, labels, batch_size): #beatm
         if swapy_:
             beatmap[:,1] = 1-beatmap[:,1]
         swapy_ = not swapy_
-        
+
         batch.append(beatmap)
     return np.array(batch), np.array(extra), np.array(y)
 
@@ -119,7 +119,7 @@ def process_data(model, beatmap:obp.Beatmap, dt:bool=False):
     beatmap_sequence, extra = beatmap.beatmap_to_data()
     if dt:
         apply_dt(beatmap_sequence, extra)
-            
+
     beatmap_sequence = torch.tensor(beatmap_sequence, dtype=torch.float32, device=device)
     extra = torch.tensor(extra, dtype=torch.float32, device=device)
     #print(extra)
@@ -132,7 +132,7 @@ def process_data(model, beatmap:obp.Beatmap, dt:bool=False):
         skillvals[i] = prediction
         skillspread.append(decode_output(prediction))
 
-    
+
     sm = nn.Softmax(dim=-1)
     kernel_size=5
 
@@ -169,7 +169,7 @@ def visualize_beatmap_skillsets(model, beatmap:obp.Beatmap, dt:bool=False):
     beatmap_sequence, extra = beatmap.beatmap_to_data()
     if dt:
         apply_dt(beatmap_sequence, extra)
-            
+
     beatmap_sequence = torch.tensor(beatmap_sequence, dtype=torch.float32)
     extra = torch.tensor(extra, dtype=torch.float32)
     #print(extra)
@@ -182,7 +182,7 @@ def visualize_beatmap_skillsets(model, beatmap:obp.Beatmap, dt:bool=False):
         skillvals[i] = prediction
         skillspread.append(decode_output(prediction))
 
-    
+
     sm = nn.Softmax(dim=-1)
     kernel_size=5
 
